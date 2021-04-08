@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,6 +75,9 @@ import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 import org.springframework.web.server.i18n.AcceptHeaderLocaleContextResolver;
 import org.springframework.web.server.i18n.FixedLocaleContextResolver;
 import org.springframework.web.server.i18n.LocaleContextResolver;
+import org.springframework.web.server.session.CookieWebSessionIdResolver;
+import org.springframework.web.server.session.DefaultWebSessionManager;
+import org.springframework.web.server.session.WebSessionManager;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for {@link EnableWebFlux WebFlux}.
@@ -300,6 +303,17 @@ public class WebFluxAutoConfiguration {
 			AcceptHeaderLocaleContextResolver localeContextResolver = new AcceptHeaderLocaleContextResolver();
 			localeContextResolver.setDefaultLocale(this.webProperties.getLocale());
 			return localeContextResolver;
+		}
+
+		@Bean
+		@ConditionalOnMissingBean(name = WebHttpHandlerBuilder.WEB_SESSION_MANAGER_BEAN_NAME)
+		public WebSessionManager webSessionManager() {
+			DefaultWebSessionManager webSessionManager = new DefaultWebSessionManager();
+			CookieWebSessionIdResolver webSessionIdResolver = new CookieWebSessionIdResolver();
+			webSessionIdResolver.addCookieInitializer((cookie) -> cookie
+					.sameSite(this.webFluxProperties.getSession().getCookie().getSameSite().attribute()));
+			webSessionManager.setSessionIdResolver(webSessionIdResolver);
+			return webSessionManager;
 		}
 
 	}

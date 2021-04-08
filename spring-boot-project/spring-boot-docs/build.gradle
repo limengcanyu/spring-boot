@@ -10,9 +10,6 @@ description = "Spring Boot Docs"
 
 configurations {
 	actuatorApiDocumentation
-	asciidoctorExtensions {
-		extendsFrom dependencyManagement
-	}
 	autoConfiguration
 	configurationProperties
 	gradlePluginDocumentation
@@ -46,7 +43,6 @@ plugins.withType(EclipsePlugin) {
 dependencies {
 	actuatorApiDocumentation(project(path: ":spring-boot-project:spring-boot-actuator-autoconfigure", configuration: "documentation"))
 
-	asciidoctorExtensions("io.spring.asciidoctor:spring-asciidoctor-extensions-block-switch")
 	asciidoctorExtensions("io.spring.asciidoctor:spring-asciidoctor-extensions-spring-boot")
 	asciidoctorExtensions(project(path: ":spring-boot-project:spring-boot-actuator-autoconfigure"))
 	asciidoctorExtensions(project(path: ":spring-boot-project:spring-boot-autoconfigure"))
@@ -83,7 +79,10 @@ dependencies {
 	implementation("org.assertj:assertj-core")
 	implementation("org.glassfish.jersey.core:jersey-server")
 	implementation("org.hibernate:hibernate-jcache")
+	implementation("org.jooq:jooq")
+	implementation("org.mongodb:mongodb-driver-sync")
 	implementation("org.slf4j:jul-to-slf4j")
+	implementation("org.springframework:spring-jdbc")
 	implementation("org.springframework:spring-test")
 	implementation("org.springframework:spring-web")
 	implementation("org.springframework:spring-webmvc")
@@ -96,6 +95,7 @@ dependencies {
 	implementation("org.springframework.restdocs:spring-restdocs-restassured")
 	implementation("org.springframework.restdocs:spring-restdocs-webtestclient")
 	implementation("org.springframework.security:spring-security-config")
+	implementation("org.springframework.security:spring-security-oauth2-client")
 	implementation("org.springframework.security:spring-security-web")
 	implementation("org.junit.jupiter:junit-jupiter")
 	implementation("org.yaml:snakeyaml")
@@ -192,7 +192,6 @@ task documentConfigurationProperties(type: org.springframework.boot.build.contex
 
 tasks.withType(org.asciidoctor.gradle.jvm.AbstractAsciidoctorTask) {
 	dependsOn dependencyVersions
-	configurations "asciidoctorExtensions"
 	baseDirFollowsSourceDir()
 	asciidoctorj {
 		fatalWarnings = ['^((?!successfully validated).)*$']

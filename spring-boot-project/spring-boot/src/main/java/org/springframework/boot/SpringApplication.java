@@ -164,7 +164,8 @@ public class SpringApplication {
 	/**
 	 * The class name of application context that will be used by default for non-web
 	 * environments.
-	 * @deprecated since 2.4.0 in favour of using a {@link ApplicationContextFactory}
+	 * @deprecated since 2.4.0 for removal in 2.6.0 in favor of using a
+	 * {@link ApplicationContextFactory}
 	 */
 	@Deprecated
 	public static final String DEFAULT_CONTEXT_CLASS = "org.springframework.context."
@@ -173,7 +174,8 @@ public class SpringApplication {
 	/**
 	 * The class name of application context that will be used by default for web
 	 * environments.
-	 * @deprecated since 2.4.0 in favour of using an {@link ApplicationContextFactory}
+	 * @deprecated since 2.4.0 for removal in 2.6.0 in favor of using an
+	 * {@link ApplicationContextFactory}
 	 */
 	@Deprecated
 	public static final String DEFAULT_SERVLET_WEB_CONTEXT_CLASS = "org.springframework.boot."
@@ -182,7 +184,8 @@ public class SpringApplication {
 	/**
 	 * The class name of application context that will be used by default for reactive web
 	 * environments.
-	 * @deprecated since 2.4.0 in favour of using an {@link ApplicationContextFactory}
+	 * @deprecated since 2.4.0 for removal in 2.6.0 in favor of using an
+	 * {@link ApplicationContextFactory}
 	 */
 	@Deprecated
 	public static final String DEFAULT_REACTIVE_WEB_CONTEXT_CLASS = "org.springframework."
@@ -236,7 +239,7 @@ public class SpringApplication {
 
 	private Map<String, Object> defaultProperties;
 
-	private List<Bootstrapper> bootstrappers;
+	private List<BootstrapRegistryInitializer> bootstrapRegistryInitializers;
 
 	private Set<String> additionalProfiles = Collections.emptySet();
 
@@ -245,6 +248,8 @@ public class SpringApplication {
 	private boolean isCustomEnvironment = false;
 
 	private boolean lazyInitialization = false;
+
+	private String environmentPrefix;
 
 	private ApplicationContextFactory applicationContextFactory = ApplicationContextFactory.DEFAULT;
 
@@ -280,10 +285,20 @@ public class SpringApplication {
 		Assert.notNull(primarySources, "PrimarySources must not be null");
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
-		this.bootstrappers = new ArrayList<>(getSpringFactoriesInstances(Bootstrapper.class));
+		this.bootstrapRegistryInitializers = getBootstrapRegistryInitializersFromSpringFactories();
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
 		this.mainApplicationClass = deduceMainApplicationClass();
+	}
+
+	@SuppressWarnings("deprecation")
+	private List<BootstrapRegistryInitializer> getBootstrapRegistryInitializersFromSpringFactories() {
+		ArrayList<BootstrapRegistryInitializer> initializers = new ArrayList<>();
+		getSpringFactoriesInstances(Bootstrapper.class).stream()
+				.map((bootstrapper) -> ((BootstrapRegistryInitializer) bootstrapper::initialize))
+				.forEach(initializers::add);
+		initializers.addAll(getSpringFactoriesInstances(BootstrapRegistryInitializer.class));
+		return initializers;
 	}
 
 	private Class<?> deduceMainApplicationClass() {
@@ -349,7 +364,7 @@ public class SpringApplication {
 
 	private DefaultBootstrapContext createBootstrapContext() {
 		DefaultBootstrapContext bootstrapContext = new DefaultBootstrapContext();
-		this.bootstrappers.forEach((initializer) -> initializer.intitialize(bootstrapContext));
+		this.bootstrapRegistryInitializers.forEach((initializer) -> initializer.initialize(bootstrapContext));
 		return bootstrapContext;
 	}
 
@@ -362,6 +377,8 @@ public class SpringApplication {
 		listeners.environmentPrepared(bootstrapContext, environment);
 		DefaultPropertiesPropertySource.moveToEnd(environment);
 		configureAdditionalProfiles(environment);
+		Assert.state(!environment.containsProperty("spring.main.environment-prefix"),
+				"Environment prefix cannot be set via properties.");
 		bindToSpringApplication(environment);
 		if (!this.isCustomEnvironment) {
 			environment = new EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment,
@@ -513,7 +530,9 @@ public class SpringApplication {
 	 */
 	protected void configurePropertySources(ConfigurableEnvironment environment, String[] args) {
 		MutablePropertySources sources = environment.getPropertySources();
-		DefaultPropertiesPropertySource.ifNotEmpty(this.defaultProperties, sources::addLast);
+		if (!CollectionUtils.isEmpty(this.defaultProperties)) {
+			DefaultPropertiesPropertySource.addOrMerge(this.defaultProperties, sources);
+		}
 		if (this.addCommandLineProperties && args.length > 0) {
 			String name = CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME;
 			if (sources.contains(name)) {
@@ -1040,10 +1059,24 @@ public class SpringApplication {
 	 * {@link BootstrapRegistry}.
 	 * @param bootstrapper the bootstraper
 	 * @since 2.4.0
+	 * @deprecated since 2.4.5 for removal in 2.6 in favor of
+	 * {@link #addBootstrapRegistryInitializer(BootstrapRegistryInitializer)}
 	 */
+	@Deprecated
 	public void addBootstrapper(Bootstrapper bootstrapper) {
 		Assert.notNull(bootstrapper, "Bootstrapper must not be null");
-		this.bootstrappers.add(bootstrapper);
+		this.bootstrapRegistryInitializers.add(bootstrapper::initialize);
+	}
+
+	/**
+	 * Adds {@link BootstrapRegistryInitializer} instances that can be used to initialize
+	 * the {@link BootstrapRegistry}.
+	 * @param bootstrapRegistryInitializer the bootstrap registry initializer to add
+	 * @since 2.4.5
+	 */
+	public void addBootstrapRegistryInitializer(BootstrapRegistryInitializer bootstrapRegistryInitializer) {
+		Assert.notNull(bootstrapRegistryInitializer, "BootstrapRegistryInitializer must not be null");
+		this.bootstrapRegistryInitializers.addAll(Arrays.asList(bootstrapRegistryInitializer));
 	}
 
 	/**
@@ -1175,12 +1208,32 @@ public class SpringApplication {
 	}
 
 	/**
+	 * Return a prefix that should be applied when obtaining configuration properties from
+	 * the system environment.
+	 * @return the environment property prefix
+	 * @since 2.5.0
+	 */
+	public String getEnvironmentPrefix() {
+		return this.environmentPrefix;
+	}
+
+	/**
+	 * Set the prefix that should be applied when obtaining configuration properties from
+	 * the system environment.
+	 * @param environmentPrefix the environment property prefix to set
+	 * @since 2.5.0
+	 */
+	public void setEnvironmentPrefix(String environmentPrefix) {
+		this.environmentPrefix = environmentPrefix;
+	}
+
+	/**
 	 * Sets the type of Spring {@link ApplicationContext} that will be created. If not
 	 * specified defaults to {@link #DEFAULT_SERVLET_WEB_CONTEXT_CLASS} for web based
 	 * applications or {@link AnnotationConfigApplicationContext} for non web based
 	 * applications.
 	 * @param applicationContextClass the context class to set
-	 * @deprecated since 2.4.0 in favor of
+	 * @deprecated since 2.4.0 for removal in 2.6.0 in favor of
 	 * {@link #setApplicationContextFactory(ApplicationContextFactory)}
 	 */
 	@Deprecated

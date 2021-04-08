@@ -66,6 +66,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Dave Syer
  * @author Stephane Nicoll
  */
+@Deprecated
 class DataSourceInitializationIntegrationTests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
@@ -87,6 +88,17 @@ class DataSourceInitializationIntegrationTests {
 	void initializationAppliesToCustomDataSource() {
 		this.contextRunner.withUserConfiguration(OneDataSource.class)
 				.withPropertyValues("spring.datasource.initialization-mode:always").run((context) -> {
+					assertThat(context).hasSingleBean(DataSource.class);
+					assertDataSourceIsInitialized(context.getBean(DataSource.class));
+				});
+	}
+
+	@Test
+	void initializationWithUsernameAndPasswordAppliesToCustomDataSource() {
+		this.contextRunner.withUserConfiguration(OneDataSource.class)
+				.withPropertyValues("spring.datasource.initialization-mode:always",
+						"spring.datasource.schema-username=test", "spring.datasource.schema-password=secret")
+				.run((context) -> {
 					assertThat(context).hasSingleBean(DataSource.class);
 					assertDataSourceIsInitialized(context.getBean(DataSource.class));
 				});
@@ -231,8 +243,8 @@ class DataSourceInitializationIntegrationTests {
 				"spring.datasource.schema:classpath:does/not/exist.sql").run((context) -> {
 					assertThat(context).hasFailed();
 					assertThat(context.getStartupFailure()).isInstanceOf(BeanCreationException.class);
-					assertThat(context.getStartupFailure()).hasMessageContaining("does/not/exist.sql");
-					assertThat(context.getStartupFailure()).hasMessageContaining("spring.datasource.schema");
+					assertThat(context.getStartupFailure())
+							.hasMessageContaining("No schema scripts found at location 'classpath:does/not/exist.sql'");
 				});
 	}
 
@@ -243,8 +255,8 @@ class DataSourceInitializationIntegrationTests {
 				"spring.datasource.data:classpath:does/not/exist.sql").run((context) -> {
 					assertThat(context).hasFailed();
 					assertThat(context.getStartupFailure()).isInstanceOf(BeanCreationException.class);
-					assertThat(context.getStartupFailure()).hasMessageContaining("does/not/exist.sql");
-					assertThat(context.getStartupFailure()).hasMessageContaining("spring.datasource.data");
+					assertThat(context.getStartupFailure())
+							.hasMessageContaining("No data scripts found at location 'classpath:does/not/exist.sql'");
 				});
 	}
 
@@ -282,7 +294,7 @@ class DataSourceInitializationIntegrationTests {
 
 		@Bean
 		DataSource oneDataSource() {
-			return new TestDataSource();
+			return new TestDataSource(true);
 		}
 
 	}
@@ -292,7 +304,7 @@ class DataSourceInitializationIntegrationTests {
 
 		@Bean
 		DataSource twoDataSource() {
-			return new TestDataSource();
+			return new TestDataSource(true);
 		}
 
 	}

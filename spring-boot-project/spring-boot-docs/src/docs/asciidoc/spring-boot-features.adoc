@@ -15,7 +15,7 @@ In many situations, you can delegate to the static `SpringApplication.run` metho
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/springapplication/main/run/MyApplication.java[tag=*]
+include::{include-springbootfeatures}/springapplication/main/run/MyApplication.java[]
 ----
 
 When your application starts, you should see something similar to the following output:
@@ -176,7 +176,7 @@ For example, to turn off the banner, you could write:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/springapplication/main/custom/MyApplication.java[tag=*]
+include::{include-springbootfeatures}/springapplication/main/custom/MyApplication.java[]
 ----
 
 NOTE: The constructor arguments passed to `SpringApplication` are configuration sources for Spring beans.
@@ -251,14 +251,14 @@ For example, we can export the "Readiness" state of the application to a file so
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/springapplication/availability/ReadinessStateExporter.java[tag=*]
+include::{include-springbootfeatures}/springapplication/availability/ReadinessStateExporter.java[]
 ----
 
 We can also update the state of the application, when the application breaks and cannot recover:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/springapplication/availability/LocalCacheVerifier.java[tag=*]
+include::{include-springbootfeatures}/springapplication/availability/LocalCacheVerifier.java[]
 ----
 
 Spring Boot provides <<production-ready-features.adoc#production-ready-kubernetes-probes,Kubernetes HTTP probes for "Liveness" and "Readiness" with Actuator Health Endpoints>>.
@@ -343,7 +343,7 @@ The `ApplicationArguments` interface provides access to both the raw `String[]` 
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/springapplication/ApplicationArgumentsExample.java[tag=*]
+include::{include-springbootfeatures}/springapplication/ApplicationArgumentsExample.java[]
 ----
 
 TIP: Spring Boot also registers a `CommandLinePropertySource` with the Spring `Environment`.
@@ -364,7 +364,7 @@ The following example shows a `CommandLineRunner` with a `run` method:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/springapplication/CommandLineRunnerExample.java[tag=*]
+include::{include-springbootfeatures}/springapplication/CommandLineRunnerExample.java[]
 ----
 
 If several `CommandLineRunner` or `ApplicationRunner` beans are defined that must be called in a specific order, you can additionally implement the `org.springframework.core.Ordered` interface or use the `org.springframework.core.annotation.Order` annotation.
@@ -381,7 +381,7 @@ This exit code can then be passed to `System.exit()` to return it as a status co
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/springapplication/exitcode/MyApplication.java[tag=*]
+include::{include-springbootfeatures}/springapplication/exitcode/MyApplication.java[]
 ----
 
 Also, the `ExitCodeGenerator` interface may be implemented by exceptions.
@@ -463,11 +463,14 @@ Config data files are considered in the following order:
 . <<boot-features-external-config-files,Application properties>> outside of your packaged jar (`application.properties` and YAML variants).
 . <<boot-features-external-config-files-profile-specific,Profile-specific application properties>> outside of your packaged jar (`application-\{profile}.properties` and YAML variants).
 
+NOTE: It is recommended to stick with one format for your entire application.
+If you have configuration files with both `.properties` and `.yml` format in the same location, `.properties` takes precedence.
+
 To provide a concrete example, suppose you develop a `@Component` that uses a `name` property, as shown in the following example:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/valueinjection/MyBean.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/valueinjection/MyBean.java[]
 ----
 
 On your application classpath (for example, inside your jar) you can have an `application.properties` file that provides a sensible default property value for `name`.
@@ -573,9 +576,9 @@ For example, if `spring.config.location` is configured with the value `optional:
 . `optional:classpath:custom-config/`
 . `optional:file:./custom-config/`
 
-If you prefer to add addition locations, rather than replacing them, you can use `spring.config.additional-location`.
+If you prefer to add additional locations, rather than replacing them, you can use `spring.config.additional-location`.
 Properties loaded from additional locations can override those in the default locations.
-For example, if `spring.config.additional-location` is configured with the value `optional:classpath:/custom-config/,optional:file:./custom-config/`, the complete the complete set of locations considered is:
+For example, if `spring.config.additional-location` is configured with the value `optional:classpath:/custom-config/,optional:file:./custom-config/`, the complete set of locations considered is:
 
 . `optional:classpath:/`
 . `optional:classpath:/config/`
@@ -744,7 +747,7 @@ For the second case, you need to use the `configtree:` prefix so that Spring Boo
 
 As an example, let's imagine that Kubernetes has mounted the following volume:
 
-[source,indent=0]
+[indent=0]
 ----
 	etc/
 	  config/
@@ -773,7 +776,7 @@ Any `configtree:` location that ends with `/*/` will import all immediate childr
 
 For example, given the following volume:
 
-[source,indent=0]
+[indent=0]
 ----
 	etc/
 	  config/
@@ -800,6 +803,18 @@ This will add `db.username`, `db.password`, `mq.username` and `mq.password` prop
 
 NOTE: Directories loaded using a wildcard are sorted alphabetically.
 If you need a different order, then you should list each location as a separate import
+
+
+Configuration trees can also be used for Docker secrets.
+When a Docker swarm service is granted access to a secret, the secret gets mounted into the container.
+For example, if a secret named `db.password` is mounted at location `/run/secrets/`, you can make `db.password` available to the Spring environment using the following:
+
+[source,yaml,indent=0,configprops,configblocks]
+----
+	spring:
+	  config:
+	    import: "optional:configtree:/run/secrets/"
+----
 
 
 
@@ -856,6 +871,8 @@ The lines immediately before and after the separator must not be comments.
 
 TIP: Multi-document property files are often used in conjunction with activation properties such as `spring.config.activate.on-profile`.
 See the <<boot-features-external-config-file-activation-properties, next section>> for details.
+
+WARNING: Multi-document property files cannot be loaded by using the `@PropertySource` or `@TestPropertySource` annotations.
 
 
 
@@ -976,6 +993,7 @@ The `YamlPropertiesFactoryBean` loads YAML as `Properties` and the `YamlMapFacto
 You can also use the `YamlPropertySourceLoader` class if you want to load YAML as a Spring `PropertySource`.
 
 
+
 [[boot-features-external-config-random-values]]
 === Configuring Random Values
 The `RandomValuePropertySource` is useful for injecting random values (for example, into secrets or test cases).
@@ -997,6 +1015,16 @@ If `max` is provided, then `value` is the minimum value and `max` is the maximum
 
 
 
+[[boot-features-external-config-system-environment]]
+=== Configuring System Environment Properties
+Spring Boot supports setting a prefix for environment properties.
+This is useful if the system environment is shared by multiple Spring Boot applications with different configuration requirements.
+The prefix for system environment properties can be set directly on `SpringApplication`.
+
+For example, if you set the prefix to `input`, a property such as `remote.timeout` will also be resolved as `input.remote.timeout` in the system environment.
+
+
+
 [[boot-features-external-config-typesafe-configuration-properties]]
 === Type-safe Configuration Properties
 Using the `@Value("$\{property}")` annotation to inject configuration properties can sometimes be cumbersome, especially if you are working with multiple properties or your data is hierarchical in nature.
@@ -1012,7 +1040,7 @@ It is possible to bind a bean declaring standard JavaBean properties as shown in
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/javabeanbinding/AcmeProperties.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/javabeanbinding/AcmeProperties.java[]
 ----
 
 The preceding POJO defines the following properties:
@@ -1053,7 +1081,7 @@ The example in the previous section can be rewritten in an immutable fashion as 
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/constructorbinding/AcmeProperties.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/constructorbinding/AcmeProperties.java[]
 ----
 
 In this setup, the `@ConstructorBinding` annotation is used to indicate that constructor binding should be used.
@@ -1093,7 +1121,7 @@ This can be done on any `@Configuration` class, as shown in the following exampl
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/enable/MyConfiguration.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/enable/MyConfiguration.java[]
 ----
 
 To use configuration property scanning, add the `@ConfigurationPropertiesScan` annotation to your application.
@@ -1103,7 +1131,7 @@ If you want to define specific packages to scan, you can do so as shown in the f
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/enable/MyApplication.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/enable/MyApplication.java[]
 ----
 
 [NOTE]
@@ -1139,7 +1167,7 @@ To work with `@ConfigurationProperties` beans, you can inject them in the same w
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/use/MyService.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/use/MyService.java[]
 ----
 
 TIP: Using `@ConfigurationProperties` also lets you generate metadata files that can be used by IDEs to offer auto-completion for your own keys.
@@ -1156,7 +1184,7 @@ To configure a bean from the `Environment` properties, add `@ConfigurationProper
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/ThirdPartyConfiguration.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/ThirdPartyConfiguration.java[]
 ----
 
 Any JavaBean property defined with the `another` prefix is mapped onto that `AnotherComponent` bean in manner similar to the preceding `AcmeProperties` example.
@@ -1172,7 +1200,7 @@ As an example, consider the following `@ConfigurationProperties` class:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/relaxed/OwnerProperties.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/relaxed/OwnerProperties.java[]
 ----
 
 With the preceding code, the following properties names can all be used:
@@ -1403,7 +1431,7 @@ Consider the following example:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/duration/javabeanbinding/AppSystemProperties.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/duration/javabeanbinding/AppSystemProperties.java[]
 ----
 
 To specify a session timeout of 30 seconds, `30`, `PT30S` and `30s` are all equivalent.
@@ -1426,7 +1454,7 @@ If you prefer to use constructor binding, the same properties can be exposed, as
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/duration/constructorbinding/AppSystemProperties.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/duration/constructorbinding/AppSystemProperties.java[]
 ----
 
 
@@ -1467,7 +1495,7 @@ Consider the following example:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/datasize/javabeanbinding/AppIoProperties.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/datasize/javabeanbinding/AppIoProperties.java[]
 ----
 
 To specify a buffer size of 10 megabytes, `10` and `10MB` are equivalent.
@@ -1488,7 +1516,7 @@ If you prefer to use constructor binding, the same properties can be exposed, as
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/datasize/constructorbinding/AppIoProperties.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/datasize/constructorbinding/AppIoProperties.java[]
 ----
 
 TIP: If you are upgrading a `Long` property, make sure to define the unit (using `@DataSizeUnit`) if it isn't bytes.
@@ -1504,7 +1532,7 @@ To do so, ensure that a compliant JSR-303 implementation is on your classpath an
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/validate/AcmeProperties.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/validate/AcmeProperties.java[]
 ----
 
 TIP: You can also trigger validation by annotating the `@Bean` method that creates the configuration properties with `@Validated`.
@@ -1514,7 +1542,7 @@ The following example builds on the preceding `AcmeProperties` example:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/externalizedconfiguration/validate/nested/AcmeProperties.java[tag=*]
+include::{include-springbootfeatures}/externalizedconfiguration/validate/nested/AcmeProperties.java[]
 ----
 
 You can also add a custom Spring `Validator` by creating a bean definition called `configurationPropertiesValidator`.
@@ -1571,7 +1599,7 @@ Any `@Component`, `@Configuration` or `@ConfigurationProperties` can be marked w
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/profiles/ProductionConfiguration.java[tag=*]
+include::{include-springbootfeatures}/profiles/ProductionConfiguration.java[]
 ----
 
 NOTE: If `@ConfigurationProperties` beans are registered via `@EnableConfigurationProperties` instead of automatic scanning, the `@Profile` annotation needs to be specified on the `@Configuration` class that has the `@EnableConfigurationProperties` annotation.
@@ -1904,20 +1932,19 @@ Spring Boot includes the following pre-defined logging groups that can be used o
 
 [[boot-features-log-shutdown-hook]]
 === Using a Log Shutdown Hook
-In order to release logging resources it is usually a good idea to stop the logging system when your application terminates.
-Unfortunately, there's no single way to do this that will work with all application types.
-If your application has complex context hierarchies or is deployed as a war file, you'll need to investigate the options provided directly by the underlying logging system.
+In order to release logging resources when your application terminates, a shutdown hook that will trigger log system cleanup when the JVM exits is provided.
+This shutdown hook is registered automatically unless your application is deployed as a war file.
+If your application has complex context hierarchies the shutdown hook may not meet your needs.
+If it does not, disable the shutdown hook and investigate the options provided directly by the underlying logging system.
 For example, Logback offers http://logback.qos.ch/manual/loggingSeparation.html[context selectors] which allow each Logger to be created in its own context.
-
-For simple "single jar" applications deployed in their own JVM, you can use the `logging.register-shutdown-hook` property.
-Setting `logging.register-shutdown-hook` to `true` will register a shutdown hook that will trigger log system cleanup when the JVM exits.
-
+You can use the configprop:logging.register-shutdown-hook[] property to disable the shutdown hook.
+Setting it to `false` will disable the registration.
 You can set the property in your `application.properties` or `application.yaml` file:
 
 [source,yaml,indent=0,configprops,configblocks]
 ----
 	logging:
-	  register-shutdown-hook: true
+	  register-shutdown-hook: false
 ----
 
 
@@ -2206,7 +2233,7 @@ The following code shows a typical `@RestController` that serves JSON data:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/webapplications/servlet/MyRestController.java[tag=*]
+include::{include-springbootfeatures}/webapplications/servlet/MyRestController.java[]
 ----
 
 Spring MVC is part of the core Spring Framework, and detailed information is available in the  {spring-framework-docs}/web.html#mvc[reference documentation].
@@ -2256,7 +2283,7 @@ If you need to add or customize converters, you can use Spring Boot's `HttpMessa
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/webapplications/HttpMessageConvertersConfiguration.java[tag=*]
+include::{include-springbootfeatures}/webapplications/HttpMessageConvertersConfiguration.java[]
 ----
 
 Any `HttpMessageConverter` bean that is present in the context is added to the list of converters.
@@ -2274,7 +2301,7 @@ You can also use it on classes that contain serializers/deserializers as inner c
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/webapplications/json/MyJsonComponent.java[tag=*]
+include::{include-springbootfeatures}/webapplications/json/MyJsonComponent.java[]
 ----
 
 All `@JsonComponent` beans in the `ApplicationContext` are automatically registered with Jackson.
@@ -2287,7 +2314,7 @@ The example above can be rewritten to use `JsonObjectSerializer`/`JsonObjectDese
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/webapplications/json/object/MyJsonComponent.java[tag=*]
+include::{include-springbootfeatures}/webapplications/json/object/MyJsonComponent.java[]
 ----
 
 
@@ -2438,15 +2465,19 @@ Most standard media types are supported out-of-the-box, but you can also define 
 Suffix pattern matching is deprecated and will be removed in a future release.
 If you understand the caveats and would still like your application to use suffix pattern matching, the following configuration is required:
 
-[source,properties,indent=0,subs="verbatim,quotes,attributes"]
+[source,yaml,indent=0,subs="verbatim,quotes,attributes",configblocks]
 ----
-	spring.mvc.contentnegotiation.favor-path-extension=true
-	spring.mvc.pathmatch.use-suffix-pattern=true
+	spring:
+	  mvc:
+	    contentnegotiation:
+	      favor-path-extension: true
+	    pathmatch:
+	      use-suffix-pattern: true
 ----
 
 Alternatively, rather than open all suffix patterns, it's more secure to only support registered suffix patterns:
 
-[source,yaml,indent=0,subs="verbatim,quotes,attributes",configprops,configblocks]
+[source,yaml,indent=0,subs="verbatim,quotes,attributes",configblocks]
 ----
 	spring:
 	  mvc:
@@ -2530,12 +2561,18 @@ You can also define a class annotated with `@ControllerAdvice` to customize the 
 
 [source,java,indent=0,subs="verbatim,quotes,attributes"]
 ----
-include::{include-springbootfeatures}/webapplications/servlet/MyControllerAdvice.java[tag=*]
+include::{include-springbootfeatures}/webapplications/servlet/MyControllerAdvice.java[]
 ----
 
 In the preceding example, if `YourException` is thrown by a controller defined in the same package as `AcmeController`, a JSON representation of the `CustomErrorType` POJO is used instead of the `ErrorAttributes` representation.
 
+In some cases, errors handled at the controller level are not recorded by the <<production-ready-features.adoc#production-ready-metrics-spring-mvc, metrics infrastructure>>.
+Applications can ensure that such exceptions are recorded with the request metrics by setting the handled exception as a request attribute:
 
+[source,java,indent=0,subs="verbatim,quotes,attributes"]
+----
+include::{include-springbootfeatures}/webapplications/servlet/MyController.java[]
+----
 
 [[boot-features-error-handling-custom-error-pages]]
 ===== Custom Error Pages
@@ -2577,7 +2614,7 @@ For more complex mappings, you can also add beans that implement the `ErrorViewR
 
 [source,java,indent=0,subs="verbatim,quotes,attributes"]
 ----
-include::{include-springbootfeatures}/webapplications/servlet/MyErrorViewResolver.java[tag=*]
+include::{include-springbootfeatures}/webapplications/servlet/MyErrorViewResolver.java[]
 ----
 
 You can also use regular Spring MVC features such as {spring-framework-docs}/web.html#mvc-exceptionhandlers[`@ExceptionHandler` methods] and {spring-framework-docs}/web.html#mvc-ann-controller-advice[`@ControllerAdvice`].
@@ -2592,14 +2629,14 @@ This abstraction works directly with the underlying embedded servlet container a
 
 [source,java,indent=0,subs="verbatim,quotes,attributes"]
 ----
-include::{include-springbootfeatures}/webapplications/servlet/ErrorPageConfiguration.java[tag=*]
+include::{include-springbootfeatures}/webapplications/servlet/ErrorPageConfiguration.java[]
 ----
 
 NOTE: If you register an `ErrorPage` with a path that ends up being handled by a `Filter` (as is common with some non-Spring web frameworks, like Jersey and Wicket), then the `Filter` has to be explicitly registered as an `ERROR` dispatcher, as shown in the following example:
 
 [source,java,indent=0,subs="verbatim,quotes,attributes"]
 ----
-include::{include-springbootfeatures}/webapplications/servlet/ServletFilterConfiguration.java[tag=*]
+include::{include-springbootfeatures}/webapplications/servlet/ServletFilterConfiguration.java[]
 ----
 
 Note that the default `FilterRegistrationBean` does not include the `ERROR` dispatcher type.
@@ -2643,7 +2680,7 @@ Using {spring-framework-docs}/web.html#mvc-cors-controller[controller method COR
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/webapplications/servlet/CorsConfiguration.java[tag=*]
+include::{include-springbootfeatures}/webapplications/servlet/CorsConfiguration.java[]
 ----
 
 
@@ -2658,19 +2695,19 @@ The annotation-based one is quite close to the Spring MVC model, as shown in the
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/webapplications/webflux/MyRestController.java[tag=*]
+include::{include-springbootfeatures}/webapplications/webflux/MyRestController.java[]
 ----
 
 "`WebFlux.fn`", the functional variant, separates the routing configuration from the actual handling of the requests, as shown in the following example:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/webapplications/webflux/fn/RoutingConfiguration.java[tag=*]
+include::{include-springbootfeatures}/webapplications/webflux/fn/RoutingConfiguration.java[]
 ----
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/webapplications/webflux/fn/UserHandler.java[tag=*]
+include::{include-springbootfeatures}/webapplications/webflux/fn/UserHandler.java[]
 ----
 
 WebFlux is part of the Spring Framework and detailed information is available in its {spring-framework-docs}/web-reactive.html#webflux-fn[reference documentation].
@@ -2714,7 +2751,7 @@ If you need to add or customize codecs, you can create a custom `CodecCustomizer
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/webapplications/webflux/CodecConfiguration.java[tag=*]
+include::{include-springbootfeatures}/webapplications/webflux/CodecConfiguration.java[]
 ----
 
 You can also leverage <<boot-features-json-components,Boot's custom JSON serializers and deserializers>>.
@@ -2787,10 +2824,18 @@ Because a `WebExceptionHandler` is quite low-level, Spring Boot also provides a 
 
 [source,java,indent=0,subs="verbatim,quotes,attributes"]
 ----
-include::{include-springbootfeatures}/webapplications/webflux/CustomErrorWebExceptionHandler.java[tag=*]
+include::{include-springbootfeatures}/webapplications/webflux/CustomErrorWebExceptionHandler.java[]
 ----
 
 For a more complete picture, you can also subclass `DefaultErrorWebExceptionHandler` directly and override specific methods.
+
+In some cases, errors handled at the controller or handler function level are not recorded by the <<production-ready-features.adoc#production-ready-metrics-web-flux, metrics infrastructure>>.
+Applications can ensure that such exceptions are recorded with the request metrics by setting the handled exception as a request attribute:
+
+[source,java,indent=0,subs="verbatim,quotes,attributes"]
+----
+include::{include-springbootfeatures}/webapplications/webflux/ExceptionHandlingController.java[]
+----
 
 
 
@@ -2865,16 +2910,9 @@ Jersey has some native Spring support, so we also provide auto-configuration sup
 
 To get started with Jersey, include the `spring-boot-starter-jersey` as a dependency and then you need one `@Bean` of type `ResourceConfig` in which you register all the endpoints, as shown in the following example:
 
-[source,java,pending-extract=true,indent=0,subs="verbatim,quotes,attributes"]
+[source,java,indent=0,subs="verbatim,quotes,attributes"]
 ----
-	@Component
-	public class JerseyConfig extends ResourceConfig {
-
-		public JerseyConfig() {
-			register(Endpoint.class);
-		}
-
-	}
+include::{include-springbootfeatures}/webapplications/jersey/JerseyConfig.java[]
 ----
 
 WARNING: Jersey's support for scanning executable archives is rather limited.
@@ -2885,18 +2923,9 @@ For more advanced customizations, you can also register an arbitrary number of b
 
 All the registered endpoints should be `@Components` with HTTP resource annotations (`@GET` and others), as shown in the following example:
 
-[source,java,pending-extract=true,indent=0,subs="verbatim,quotes,attributes"]
+[source,java,indent=0,subs="verbatim,quotes,attributes"]
 ----
-	@Component
-	@Path("/hello")
-	public class Endpoint {
-
-		@GET
-		public String message() {
-			return "Hello";
-		}
-
-	}
+include::{include-springbootfeatures}/webapplications/jersey/Endpoint.java[]
 ----
 
 Since the `Endpoint` is a Spring `@Component`, its lifecycle is managed by Spring and you can use the `@Autowired` annotation to inject dependencies and use the `@Value` annotation to inject external configuration.
@@ -3008,21 +3037,9 @@ If you need to programmatically configure your embedded servlet container, you c
 `WebServerFactoryCustomizer` provides access to the `ConfigurableServletWebServerFactory`, which includes numerous customization setter methods.
 The following example shows programmatically setting the port:
 
-[source,java,pending-extract=true,indent=0]
+[source,java,indent=0]
 ----
-	import org.springframework.boot.web.server.WebServerFactoryCustomizer;
-	import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
-	import org.springframework.stereotype.Component;
-
-	@Component
-	public class CustomizationBean implements WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> {
-
-		@Override
-		public void customize(ConfigurableServletWebServerFactory server) {
-			server.setPort(9000);
-		}
-
-	}
+include::{include-springbootfeatures}/webapplications/embeddedservletcontainer/CustomizationBean.java[]
 ----
 
 `TomcatServletWebServerFactory`, `JettyServletWebServerFactory` and `UndertowServletWebServerFactory` are dedicated variants of `ConfigurableServletWebServerFactory` that have additional customization setter methods for Tomcat, Jetty and Undertow respectively.
@@ -3030,7 +3047,7 @@ The following example shows how to customize `TomcatServletWebServerFactory` tha
 
 [source,java,indent=0,subs="verbatim,quotes,attributes"]
 ----
-include::{include-springbootfeatures}/webapplications/TomcatServerCustomizer.java[tag=*]
+include::{include-springbootfeatures}/webapplications/embeddedservletcontainer/TomcatServerCustomizer.java[]
 ----
 
 
@@ -3198,24 +3215,9 @@ This is done on purpose since this builder is stateful and you shouldn't create 
 
 The following code shows a typical example:
 
-[source,java,pending-extract=true,indent=0]
+[source,java,indent=0]
 ----
-	@Service
-	public class MyService {
-
-		private final Mono<RSocketRequester> rsocketRequester;
-
-		public MyService(RSocketRequester.Builder rsocketRequesterBuilder) {
-			this.rsocketRequester = rsocketRequesterBuilder
-					.connectTcp("example.org", 9898).cache();
-		}
-
-		public Mono<User> someRSocketCall(String name) {
-			return this.rsocketRequester.flatMap(req ->
-			            req.route("user").data(name).retrieveMono(User.class));
-		}
-
-	}
+include::{include-springbootfeatures}/rsocket/MyService.java[]
 ----
 
 
@@ -3282,9 +3284,9 @@ Spring Boot provides convenience methods that can be used to override access rul
 
 For example, you can customize your security configuration by adding something like:
 
-[source,java,pending-extract=true,indent=0]
+[source,java,indent=0]
 ----
-include::{include-springbootfeatures}/security/CustomWebFluxSecurityConfiguration.java[tag=*]
+include::{include-springbootfeatures}/security/CustomWebFluxSecurityConfiguration.java[]
 ----
 
 
@@ -3361,19 +3363,9 @@ By default, Spring Security's `OAuth2LoginAuthenticationFilter` only processes U
 If you want to customize the `redirect-uri` to use a different pattern, you need to provide configuration to process that custom pattern.
 For example, for servlet applications, you can add your own `SecurityFilterChain` that resembles the following:
 
-[source,java,pending-extract=true,indent=0]
+[source,java,indent=0]
 ----
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .authorizeRequests()
-                .anyRequest().authenticated()
-                .and()
-            .oauth2Login()
-                .redirectionEndpoint()
-                    .baseUri("/custom-callback");
-        return http.build();
-    }
+include::{include-springbootfeatures}/security/OAuthClientConfiguration.java[]
 ----
 
 TIP: Spring Boot auto-configures an `InMemoryOAuth2AuthorizedClientService` which is used by Spring Security for the management of client registrations.
@@ -3606,22 +3598,11 @@ Disabling the database's automatic shutdown lets Spring Boot control when the da
 [[boot-features-connect-to-production-database]]
 ==== Connection to a Production Database
 Production database connections can also be auto-configured by using a pooling `DataSource`.
-Spring Boot uses the following algorithm for choosing a specific implementation:
 
-. We prefer https://github.com/brettwooldridge/HikariCP[HikariCP] for its performance and concurrency.
-  If HikariCP is available, we always choose it.
-. Otherwise, if the Tomcat pooling `DataSource` is available, we use it.
-. Otherwise, if https://commons.apache.org/proper/commons-dbcp/[Commons DBCP2] is available, we use it.
-. If none of HikariCP, Tomcat, and DBCP2 are available and if Oracle UCP is available, we use it.
 
-If you use the `spring-boot-starter-jdbc` or `spring-boot-starter-data-jpa` "`starters`", you automatically get a dependency to `HikariCP`.
 
-NOTE: You can bypass that algorithm completely and specify the connection pool to use by setting the configprop:spring.datasource.type[] property.
-This is especially important if you run your application in a Tomcat container, as `tomcat-jdbc` is provided by default.
-
-TIP: Additional connection pools can always be configured manually.
-If you define your own `DataSource` bean, auto-configuration does not occur.
-
+[[boot-features-connect-to-production-database-configuration]]
+==== DataSource Configuration
 DataSource configuration is controlled by external configuration properties in `+spring.datasource.*+`.
 For example, you might declare the following section in `application.properties`:
 
@@ -3640,12 +3621,11 @@ Otherwise, Spring Boot tries to auto-configure an embedded database.
 TIP: Spring Boot can deduce the JDBC driver class for most databases from the URL.
 If you need to specify a specific class, you can use the configprop:spring.datasource.driver-class-name[] property.
 
-
 NOTE: For a pooling `DataSource` to be created, we need to be able to verify that a valid `Driver` class is available, so we check for that before doing anything.
 In other words, if you set `spring.datasource.driver-class-name=com.mysql.jdbc.Driver`, then that class has to be loadable.
 
 See {spring-boot-autoconfigure-module-code}/jdbc/DataSourceProperties.java[`DataSourceProperties`] for more of the supported options.
-These are the standard options that work regardless of the actual implementation.
+These are the standard options that work regardless of <<boot-features-connect-to-production-database-connection-pool, the actual implementation>>.
 It is also possible to fine-tune implementation-specific settings by using their respective prefix (`+spring.datasource.hikari.*+`, `+spring.datasource.tomcat.*+`, `+spring.datasource.dbcp2.*+`, and `+spring.datasource.oracleucp.*+`).
 Refer to the documentation of the connection pool implementation you are using for more details.
 
@@ -3662,6 +3642,35 @@ For instance, if you use the {tomcat-docs}/jdbc-pool.html#Common_Attributes[Tomc
 ----
 
 This will set the pool to wait 10000 ms before throwing an exception if no connection is available, limit the maximum number of connections to 50 and validate the connection before borrowing it from the pool.
+
+
+
+[[boot-features-connect-to-production-database-connection-pool]]
+==== Supported Connection Pools
+Spring Boot uses the following algorithm for choosing a specific implementation:
+
+. We prefer https://github.com/brettwooldridge/HikariCP[HikariCP] for its performance and concurrency.
+If HikariCP is available, we always choose it.
+. Otherwise, if the Tomcat pooling `DataSource` is available, we use it.
+. Otherwise, if https://commons.apache.org/proper/commons-dbcp/[Commons DBCP2] is available, we use it.
+. If none of HikariCP, Tomcat, and DBCP2 are available and if Oracle UCP is available, we use it.
+
+NOTE: If you use the `spring-boot-starter-jdbc` or `spring-boot-starter-data-jpa` "`starters`", you automatically get a dependency to `HikariCP`.
+
+You can bypass that algorithm completely and specify the connection pool to use by setting the configprop:spring.datasource.type[] property.
+This is especially important if you run your application in a Tomcat container, as `tomcat-jdbc` is provided by default.
+
+Additional connection pools can always be configured manually, using `DataSourceBuilder`.
+If you define your own `DataSource` bean, auto-configuration does not occur.
+The following connection pools are supported by `DataSourceBuilder`:
+
+* HikariCP
+* Tomcat pooling `Datasource`
+* Commons DBCP2
+* Orale UCP & `OracleDataSource`
+* Spring Framework's `SimpleDriverDataSource`
+* H2 `JdbcDataSource`
+* PostgreSQL `PGSimpleDataSource`
 
 
 
@@ -3685,25 +3694,9 @@ For example, the following section in `application.properties` shows how you can
 === Using JdbcTemplate
 Spring's `JdbcTemplate` and `NamedParameterJdbcTemplate` classes are auto-configured, and you can `@Autowire` them directly into your own beans, as shown in the following example:
 
-[source,java,pending-extract=true,indent=0]
+[source,java,indent=0]
 ----
-	import org.springframework.beans.factory.annotation.Autowired;
-	import org.springframework.jdbc.core.JdbcTemplate;
-	import org.springframework.stereotype.Component;
-
-	@Component
-	public class MyBean {
-
-		private final JdbcTemplate jdbcTemplate;
-
-		@Autowired
-		public MyBean(JdbcTemplate jdbcTemplate) {
-			this.jdbcTemplate = jdbcTemplate;
-		}
-
-		// ...
-
-	}
+include::{include-springbootfeatures}/sql/jdbctemplate/MyBean.java[]
 ----
 
 You can customize some properties of the template by using the `spring.jdbc.template.*` properties, as shown in the following example:
@@ -3745,49 +3738,9 @@ By default, all packages below your main configuration class (the one annotated 
 Any classes annotated with `@Entity`, `@Embeddable`, or `@MappedSuperclass` are considered.
 A typical entity class resembles the following example:
 
-[source,java,pending-extract=true,indent=0]
+[source,java,indent=0]
 ----
-	package com.example.myapp.domain;
-
-	import java.io.Serializable;
-	import javax.persistence.*;
-
-	@Entity
-	public class City implements Serializable {
-
-		@Id
-		@GeneratedValue
-		private Long id;
-
-		@Column(nullable = false)
-		private String name;
-
-		@Column(nullable = false)
-		private String state;
-
-		// ... additional members, often include @OneToMany mappings
-
-		protected City() {
-			// no-args constructor required by JPA spec
-			// this one is protected since it shouldn't be used directly
-		}
-
-		public City(String name, String state) {
-			this.name = name;
-			this.state = state;
-		}
-
-		public String getName() {
-			return this.name;
-		}
-
-		public String getState() {
-			return this.state;
-		}
-
-		// ... etc
-
-	}
+include::{include-springbootfeatures}/sql/jpa/City.java[]
 ----
 
 TIP: You can customize entity scanning locations by using the `@EntityScan` annotation.
@@ -3808,20 +3761,9 @@ If you use auto-configuration, repositories are searched from the package contai
 
 The following example shows a typical Spring Data repository interface definition:
 
-[source,java,pending-extract=true,indent=0]
+[source,java,indent=0]
 ----
-	package com.example.myapp.domain;
-
-	import org.springframework.data.domain.*;
-	import org.springframework.data.repository.*;
-
-	public interface CityRepository extends Repository<City, Long> {
-
-		Page<City> findAll(Pageable pageable);
-
-		City findByNameAndStateAllIgnoringCase(String name, String state);
-
-	}
+include::{include-springbootfeatures}/sql/jpa/CityRepository.java[]
 ----
 
 Spring Data JPA repositories support three different modes of bootstrapping: default, deferred, and lazy.
@@ -3951,34 +3893,20 @@ The following listing shows an example:
 ==== Using DSLContext
 The fluent API offered by jOOQ is initiated through the `org.jooq.DSLContext` interface.
 Spring Boot auto-configures a `DSLContext` as a Spring Bean and connects it to your application `DataSource`.
-To use the `DSLContext`, you can `@Autowire` it, as shown in the following example:
+To use the `DSLContext`, you can inject it, as shown in the following example:
 
-[source,java,pending-extract=true,indent=0]
+[source,java,indent=0]
 ----
-	@Component
-	public class JooqExample implements CommandLineRunner {
-
-		private final DSLContext create;
-
-		@Autowired
-		public JooqExample(DSLContext dslContext) {
-			this.create = dslContext;
-		}
-
-	}
+include::{include-springbootfeatures}/sql/jooq/JooqExample.java[tag=!method]
 ----
 
 TIP: The jOOQ manual tends to use a variable named `create` to hold the `DSLContext`.
 
 You can then use the `DSLContext` to construct your queries, as shown in the following example:
 
-[source,java,pending-extract=true,indent=0]
+[source,java,indent=0]
 ----
-	public List<GregorianCalendar> authorsBornAfter1980() {
-		return this.create.selectFrom(AUTHOR)
-			.where(AUTHOR.DATE_OF_BIRTH.greaterThan(new GregorianCalendar(1980, 0, 1)))
-			.fetch(AUTHOR.DATE_OF_BIRTH);
-	}
+include::{include-springbootfeatures}/sql/jooq/JooqExample.java[tag=method]
 ----
 
 
@@ -4022,7 +3950,7 @@ TIP: You do not need to specify a driver class name, since Spring Boot obtains t
 NOTE: At least the url should be provided.
 Information specified in the URL takes precedence over individual properties, i.e. `name`, `username`, `password` and pooling options.
 
-TIP: The "`How-to`" section includes a <<howto.adoc#howto-initialize-a-database-using-r2dbc, section on how to initialize a database>>.
+TIP: The "`How-to`" section includes a <<howto.adoc#howto-initialize-a-database-using-basic-scripts, section on how to initialize a database>>.
 
 To customize the connections created by a `ConnectionFactory`, i.e., set specific parameters that you do not want (or cannot) configure in your central database configuration, you can use a `ConnectionFactoryOptionsBuilderCustomizer` `@Bean`.
 The following example shows how to manually override the database port while the rest of the options is taken from the application configuration:
@@ -4439,7 +4367,7 @@ To enable transaction management, the following bean must be defined in your con
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/nosql/Neo4jReactiveTransactionManagerConfiguration.java[tag=*]
+include::{include-springbootfeatures}/nosql/Neo4jReactiveTransactionManagerConfiguration.java[]
 ----
 ====
 
@@ -4660,7 +4588,9 @@ If you need to configure the port, use `spring.data.cassandra.port`.
 ====
 The Cassandra driver has its own configuration infrastructure that loads an `application.conf` at the root of the classpath.
 
-Spring Boot does not look for such a file and rather provides a number of configuration properties via the `spring.data.cassandra.*` namespace.
+Spring Boot does not look for such a file by default but can load one using `spring.data.cassandra.config`.
+If a property is both present in `+spring.data.cassandra.*+` and the configuration file, the value in `+spring.data.cassandra.*+` takes precedence.
+
 For more advanced driver customizations, you can register an arbitrary number of beans that implement `DriverConfigLoaderBuilderCustomizer`.
 The `CqlSession` can be customized with a bean of type `CqlSessionBuilderCustomizer`.
 ====
@@ -4922,7 +4852,7 @@ If the connection to InfluxDB requires a user and password, you can set the `spr
 InfluxDB relies on OkHttp.
 If you need to tune the http client `InfluxDB` uses behind the scenes, you can register an `InfluxDbOkHttpClientBuilderProvider` bean.
 
-If you need more control over the configuration, consider registering a `InfluxDbCustomizer` bean.
+If you need more control over the configuration, consider registering an `InfluxDbCustomizer` bean.
 
 
 
@@ -5126,7 +5056,7 @@ The following example shows a customizer that configures a specific entry expira
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/nosql/CouchbaseCacheManagerConfiguration.java[tag=*]
+include::{include-springbootfeatures}/nosql/CouchbaseCacheManagerConfiguration.java[]
 ----
 
 
@@ -5157,7 +5087,7 @@ The following example shows a customizer that configures a specific time to live
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/nosql/RedisCacheManagerConfiguration.java[tag=*]
+include::{include-springbootfeatures}/nosql/RedisCacheManagerConfiguration.java[]
 ----
 
 
@@ -5724,7 +5654,7 @@ To use the factory bean, wire `StreamsBuilder` into your `@Bean` as shown in the
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/messaging/KafkaStreamsConfiguration.java[tag=*]
+include::{include-springbootfeatures}/messaging/KafkaStreamsConfiguration.java[]
 ----
 
 By default, the streams managed by the `StreamBuilder` object it creates are started automatically.
@@ -5879,7 +5809,7 @@ The following example shows a customizer that configures the use of a proxy for 
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/resttemplate/RestTemplateProxyCustomizer.java[tag=*]
+include::{include-springbootfeatures}/resttemplate/RestTemplateProxyCustomizer.java[]
 ----
 
 Finally, you can also create your own `RestTemplateBuilder` bean.
@@ -5888,7 +5818,7 @@ The following example exposes a `RestTemplateBuilder` with what Spring Boot woul
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/resttemplate/RestTemplateBuilderConfiguration.java[tag=*]
+include::{include-springbootfeatures}/resttemplate/RestTemplateBuilderConfiguration.java[]
 ----
 
 The most extreme (and rarely used) option is to create your own `RestTemplateBuilder` bean without using a configurer.
@@ -6248,7 +6178,7 @@ The thread pool uses one thread by default and its settings can be fine-tuned us
 	spring:
 	  task:
 	    scheduling:
-          thread-name-prefix: "scheduling-"
+	      thread-name-prefix: "scheduling-"
 	      pool:
 	        size: 2
 ----
@@ -6553,7 +6483,7 @@ have `@SpringBootTest` inject them using the `args` attribute.
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/ApplicationArgumentTests.java[tag=*]
+include::{include-springbootfeatures}/testing/ApplicationArgumentTests.java[]
 ----
 
 
@@ -6565,7 +6495,7 @@ If you have web endpoints that you want to test against this mock environment, y
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/MockMvcTests.java[tag=*]
+include::{include-springbootfeatures}/testing/MockMvcTests.java[]
 ----
 
 TIP: If you want to focus only on the web layer and not start a complete `ApplicationContext`, consider <<boot-features-testing-spring-boot-applications-testing-autoconfigured-mvc-tests,using `@WebMvcTest` instead>>.
@@ -6574,7 +6504,7 @@ Alternatively, you can configure a {spring-framework-docs}/testing.html#webtestc
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/MockWebTestClientTests.java[tag=*]
+include::{include-springbootfeatures}/testing/MockWebTestClientTests.java[]
 ----
 
 [TIP]
@@ -6599,7 +6529,7 @@ For convenience, tests that need to make REST calls to the started server can ad
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/RandomPortWebTestClientTests.java[tag=*]
+include::{include-springbootfeatures}/testing/RandomPortWebTestClientTests.java[]
 ----
 
 This setup requires `spring-webflux` on the classpath.
@@ -6607,7 +6537,7 @@ If you can't or won't add webflux, Spring Boot also provides a `TestRestTemplate
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/RandomPortTestRestTemplateTests.java[tag=*]
+include::{include-springbootfeatures}/testing/RandomPortTestRestTemplateTests.java[]
 ----
 
 
@@ -6626,7 +6556,7 @@ If such test needs access to an `MBeanServer`, consider marking it dirty as well
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/jmx/SampleJmxTests.java[tag=*]
+include::{include-springbootfeatures}/testing/jmx/SampleJmxTests.java[]
 ----
 
 
@@ -6654,11 +6584,11 @@ Mock beans are automatically reset after each test method.
 [NOTE]
 ====
 If your test uses one of Spring Boot's test annotations (such as `@SpringBootTest`), this feature is automatically enabled.
-To use this feature with a different arrangement, a listener must be explicitly added, as shown in the following example:
+To use this feature with a different arrangement, listeners must be explicitly added, as shown in the following example:
 
 [source,java,pending-extract=true,indent=0]
 ----
-	@TestExecutionListeners(MockitoTestExecutionListener.class)
+	@TestExecutionListeners({ MockitoTestExecutionListener.class, ResetMocksTestExecutionListener.class })
 ----
 
 ====
@@ -7449,14 +7379,14 @@ You can inject it by using `@Autowired` and use it in your tests as you normally
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/restdocs/webclient/UsersDocumentationTests.java[tag=*]
+include::{include-springbootfeatures}/testing/restdocs/webclient/UsersDocumentationTests.java[]
 ----
 
 If you require more control over Spring REST Docs configuration than offered by the attributes of `@AutoConfigureRestDocs`, you can use a `RestDocsWebTestClientConfigurationCustomizer` bean, as shown in the following example:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/restdocs/webclient/AdvancedRestDocsConfiguration.java[tag=*]
+include::{include-springbootfeatures}/testing/restdocs/webclient/AdvancedRestDocsConfiguration.java[]
 ----
 
 
@@ -7468,14 +7398,14 @@ You can inject it by using `@Autowired` and use it in your tests as you normally
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/restdocs/restassured/UserDocumentationTests.java[tag=*]
+include::{include-springbootfeatures}/testing/restdocs/restassured/UserDocumentationTests.java[]
 ----
 
 If you require more control over Spring REST Docs configuration than offered by the attributes of `@AutoConfigureRestDocs`, a `RestDocsRestAssuredConfigurationCustomizer` bean can be used, as shown in the following example:
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/restdocs/restassured/AdvancedRestDocsConfiguration.java[tag=*]
+include::{include-springbootfeatures}/testing/restdocs/restassured/AdvancedRestDocsConfiguration.java[]
 ----
 
 
@@ -7669,7 +7599,7 @@ To use add `@ExtendWith(OutputCaptureExtension.class)` and inject `CapturedOutpu
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/OutputCaptureTests.java[tag=*]
+include::{include-springbootfeatures}/testing/OutputCaptureTests.java[]
 ----
 
 
@@ -7714,7 +7644,7 @@ Any URLs that do not specify a host and port automatically connect to the embedd
 
 [source,java,indent=0]
 ----
-include::{include-springbootfeatures}/testing/webclient/SampleWebClientTests.java[tag=*]
+include::{include-springbootfeatures}/testing/webclient/SampleWebClientTests.java[]
 ----
 
 
