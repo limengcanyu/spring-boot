@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 the original author or authors.
+ * Copyright 2012-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import org.asciidoctor.gradle.jvm.AsciidoctorTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.Sync;
 
 import org.springframework.boot.build.artifactory.ArtifactoryRepository;
@@ -96,7 +97,9 @@ class AsciidoctorConventions {
 		ConfigurationContainer configurations = project.getConfigurations();
 		Configuration asciidoctorExtensions = configurations.maybeCreate(EXTENSIONS_CONFIGURATION);
 		asciidoctorExtensions.getDependencies().add(project.getDependencies()
-				.create("io.spring.asciidoctor.backends:spring-asciidoctor-backends:0.0.1-M1"));
+				.create("io.spring.asciidoctor.backends:spring-asciidoctor-backends:0.0.1-SNAPSHOT"));
+		asciidoctorExtensions.getDependencies()
+				.add(project.getDependencies().create("org.asciidoctor:asciidoctorj-pdf:1.5.3"));
 		Configuration dependencyManagement = configurations.findByName("dependencyManagement");
 		if (dependencyManagement != null) {
 			asciidoctorExtensions.extendsFrom(dependencyManagement);
@@ -110,7 +113,9 @@ class AsciidoctorConventions {
 		asciidoctorTask.baseDirFollowsSourceDir();
 		createSyncDocumentationSourceTask(project, asciidoctorTask);
 		if (asciidoctorTask instanceof AsciidoctorTask) {
-			configureAsciidoctorHtmlTask(project, (AsciidoctorTask) asciidoctorTask);
+			boolean pdf = asciidoctorTask.getName().toLowerCase().contains("pdf");
+			String backend = (!pdf) ? "spring-html" : "spring-pdf";
+			((AsciidoctorTask) asciidoctorTask).outputOptions((outputOptions) -> outputOptions.backends(backend));
 		}
 	}
 
@@ -125,7 +130,7 @@ class AsciidoctorConventions {
 
 	private String determineGitHubTag(Project project) {
 		String version = "v" + project.getVersion();
-		return (version.endsWith("-SNAPSHOT")) ? "master" : version;
+		return (version.endsWith("-SNAPSHOT")) ? "main" : version;
 	}
 
 	private void configureOptions(AbstractAsciidoctorTask asciidoctorTask) {
@@ -139,13 +144,10 @@ class AsciidoctorConventions {
 		syncDocumentationSource.setDestinationDir(syncedSource);
 		syncDocumentationSource.from("src/docs/");
 		asciidoctorTask.dependsOn(syncDocumentationSource);
-		asciidoctorTask.getInputs().dir(syncedSource);
+		asciidoctorTask.getInputs().dir(syncedSource).withPathSensitivity(PathSensitivity.RELATIVE)
+				.withPropertyName("synced source");
 		asciidoctorTask.setSourceDir(project.relativePath(new File(syncedSource, "asciidoc/")));
 		return syncDocumentationSource;
-	}
-
-	private void configureAsciidoctorHtmlTask(Project project, AsciidoctorTask asciidoctorTask) {
-		asciidoctorTask.outputOptions((outputOptions) -> outputOptions.backends("spring-html"));
 	}
 
 }

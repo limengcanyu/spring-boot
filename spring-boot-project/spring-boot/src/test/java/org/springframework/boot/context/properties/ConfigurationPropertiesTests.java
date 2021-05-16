@@ -65,6 +65,7 @@ import org.springframework.boot.convert.DurationUnit;
 import org.springframework.boot.convert.PeriodFormat;
 import org.springframework.boot.convert.PeriodStyle;
 import org.springframework.boot.convert.PeriodUnit;
+import org.springframework.boot.env.RandomValuePropertySource;
 import org.springframework.boot.testsupport.system.CapturedOutput;
 import org.springframework.boot.testsupport.system.OutputCaptureExtension;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -76,6 +77,7 @@ import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.GenericConverter;
+import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.StandardEnvironment;
@@ -646,6 +648,20 @@ class ConfigurationPropertiesTests {
 	}
 
 	@Test
+	void loadWhenBeanFactoryConversionServiceAndConverterBean() {
+		DefaultConversionService conversionService = new DefaultConversionService();
+		conversionService.addConverter(new AlienConverter());
+		this.context.getBeanFactory().setConversionService(conversionService);
+		load(new Class<?>[] { ConverterConfiguration.class, PersonAndAlienProperties.class }, "test.person=John Smith",
+				"test.alien=Alf Tanner");
+		PersonAndAlienProperties properties = this.context.getBean(PersonAndAlienProperties.class);
+		assertThat(properties.getPerson().firstName).isEqualTo("John");
+		assertThat(properties.getPerson().lastName).isEqualTo("Smith");
+		assertThat(properties.getAlien().firstName).isEqualTo("Alf");
+		assertThat(properties.getAlien().lastName).isEqualTo("Tanner");
+	}
+
+	@Test
 	void loadWhenConfigurationConverterIsNotQualifiedShouldNotConvert() {
 		assertThatExceptionOfType(BeanCreationException.class)
 				.isThrownBy(
@@ -1044,6 +1060,18 @@ class ConfigurationPropertiesTests {
 		load(WithPublicStringConstructorPropertiesConfiguration.class);
 		WithPublicStringConstructorProperties bean = this.context.getBean(WithPublicStringConstructorProperties.class);
 		assertThat(bean.getA()).isEqualTo("baz");
+	}
+
+	@Test // gh-26201
+	void loadWhenBoundToRandomPropertyPlaceholder() {
+		MutablePropertySources sources = this.context.getEnvironment().getPropertySources();
+		sources.addFirst(new RandomValuePropertySource());
+		Map<String, Object> source = new HashMap<>();
+		source.put("com.example.bar", "${random.int[100,200]}");
+		sources.addLast(new MapPropertySource("test", source));
+		load(SimplePrefixedProperties.class);
+		SimplePrefixedProperties bean = this.context.getBean(SimplePrefixedProperties.class);
+		assertThat(bean.getBar()).isNotNull().containsOnlyDigits();
 	}
 
 	@Test
@@ -1909,6 +1937,32 @@ class ConfigurationPropertiesTests {
 	}
 
 	@EnableConfigurationProperties
+	@ConfigurationProperties(prefix = "test")
+	static class PersonAndAlienProperties {
+
+		private Person person;
+
+		private Alien alien;
+
+		Person getPerson() {
+			return this.person;
+		}
+
+		void setPerson(Person person) {
+			this.person = person;
+		}
+
+		Alien getAlien() {
+			return this.alien;
+		}
+
+		void setAlien(Alien alien) {
+			this.alien = alien;
+		}
+
+	}
+
+	@EnableConfigurationProperties
 	@ConfigurationProperties(prefix = "sample")
 	static class MapWithNumericKeyProperties {
 
@@ -2201,6 +2255,16 @@ class ConfigurationPropertiesTests {
 
 	}
 
+	static class AlienConverter implements Converter<String, Alien> {
+
+		@Override
+		public Alien convert(String source) {
+			String[] content = StringUtils.split(source, " ");
+			return new Alien(content[0], content[1]);
+		}
+
+	}
+
 	static class GenericPersonConverter implements GenericConverter {
 
 		@Override
@@ -2248,6 +2312,27 @@ class ConfigurationPropertiesTests {
 		private final String lastName;
 
 		Person(String firstName, String lastName) {
+			this.firstName = firstName;
+			this.lastName = lastName;
+		}
+
+		String getFirstName() {
+			return this.firstName;
+		}
+
+		String getLastName() {
+			return this.lastName;
+		}
+
+	}
+
+	static class Alien {
+
+		private final String firstName;
+
+		private final String lastName;
+
+		Alien(String firstName, String lastName) {
 			this.firstName = firstName;
 			this.lastName = lastName;
 		}

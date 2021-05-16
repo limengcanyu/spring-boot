@@ -162,7 +162,7 @@ public class WebMvcAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean(HiddenHttpMethodFilter.class)
-	@ConditionalOnProperty(prefix = "spring.mvc.hiddenmethod.filter", name = "enabled", matchIfMissing = false)
+	@ConditionalOnProperty(prefix = "spring.mvc.hiddenmethod.filter", name = "enabled")
 	public OrderedHiddenHttpMethodFilter hiddenHttpMethodFilter() {
 		return new OrderedHiddenHttpMethodFilter();
 	}
@@ -426,6 +426,7 @@ public class WebMvcAutoConfiguration {
 			customizer.accept(registration);
 			registration.setCachePeriod(getSeconds(this.resourceProperties.getCache().getPeriod()));
 			registration.setCacheControl(this.resourceProperties.getCache().getCachecontrol().toHttpCacheControl());
+			registration.setUseLastModified(this.resourceProperties.getCache().isUseLastModified());
 			customizeResourceHandlerRegistration(registration);
 		}
 
